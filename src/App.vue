@@ -3,13 +3,18 @@
     <h2>List all persons</h2>
     <button type="button" @click="getPersons">Get Persons</button>
     <ul>
-      <li v-for="person in persons">{{ person.name }} - {{ person.age}} years old – ID: {{ person.id}}</li>
+      <li v-for="person in persons">
+        <b>Author #{{ person.id}}</b>: {{ person.name }} - {{ person.age}} years old
+        <ul>
+          <li v-for="post in person.postSet">{{ post.title }}</li>
+        </ul>
+      </li>
     </ul>
 
     <h2>Add Person</h2>
     <input type="text" name="name" placeholder="Name" v-model="name">
     <input type="number" name="age" min="18" max="100" placeholder="Age" v-model="age">
-    <button type="button" @click="getPersons">Add Person</button>
+    <button type="button" @click="addPerson">Add Person</button>
   </div>
 </template>
 
@@ -20,6 +25,7 @@
     name: 'app',
     data () {
       return {
+        graphqlEndpoint: 'http://localhost:8000/graphql',
         persons: [],
         name: '',
         age: '',
@@ -29,11 +35,11 @@
       getPersons () {
         const query = `{
                           allPersons {
-                              id, name, age
+                              id, name, age, postSet { title }
                           }
                         }`
 
-        request('http://localhost:8000/graphql', query).then(data =>
+        request(this.graphqlEndpoint, query).then(data =>
           this.persons = data.allPersons
         )
       },
@@ -43,6 +49,11 @@
             person { id, name, age }
           }
         }`
+        request(this.graphqlEndpoint, mutation, {name: this.name, age: this.age}).then(data => {
+          alert(`Added person ${data.createPerson.person.name}.`)
+          this.name = ''
+          this.age = ''
+        })
       }
     },
   }
@@ -68,7 +79,6 @@ ul {
 }
 
 li {
-  display: inline-block;
   margin: 0 10px;
 }
 
