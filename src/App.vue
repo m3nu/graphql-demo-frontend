@@ -11,6 +11,11 @@
       </li>
     </ul>
 
+    <h2>Login to Add Person</h2>
+    <input type="text" name="username" placeholder="Username" v-model="username">
+    <input type="password" name="password" v-model="password">
+    <button type="button" @click="login">Login</button>
+
     <h2>Add Person</h2>
     <input type="text" name="name" placeholder="Name" v-model="name">
     <input type="number" name="age" min="18" max="100" placeholder="Age" v-model="age">
@@ -19,16 +24,20 @@
 </template>
 
 <script>
-  import { request } from 'graphql-request'
+  import { request, GraphQLClient } from 'graphql-request'
 
   export default {
     name: 'app',
     data () {
       return {
-        graphqlEndpoint: 'http://localhost:8000/graphql',
+        graphQLClient: new GraphQLClient('http://localhost:8000/graphql', {
+          credentials: 'include',
+        }),
         persons: [],
         name: '',
         age: '',
+        username: 'demo',
+        password: 'demo',
       }
     },
     methods: {
@@ -39,9 +48,25 @@
                           }
                         }`
 
-        request(this.graphqlEndpoint, query).then(data =>
+        this.graphQLClient.request(query).then(data =>
           this.persons = data.allPersons
         )
+      },
+      login () {
+        const mutation = `mutation login($username: String!, $password: String!) {
+          login(username: $username, password: $password) {
+            ok
+          }
+        }`
+        this.graphQLClient.request(mutation, {username: this.username, password: this.password})
+          .then(data => {
+            alert("Successfully logged in.")
+            this.username = ''
+            this.password = ''
+          })
+          .catch( (error) => {
+            alert(error.response.errors[0].message)
+          })
       },
       addPerson () {
         const mutation = `mutation addPerson($name: String!, $age: Int!) {
@@ -49,11 +74,15 @@
             person { id, name, age }
           }
         }`
-        request(this.graphqlEndpoint, mutation, {name: this.name, age: this.age}).then(data => {
-          alert(`Added person ${data.createPerson.person.name}.`)
-          this.name = ''
-          this.age = ''
-        })
+        this.graphQLClient.request(mutation, {name: this.name, age: this.age})
+          .then(data => {
+            alert(`Added person ${data.createPerson.person.name}.`)
+            this.name = ''
+            this.age = ''
+          })
+          .catch(error => {
+            alert(error.response.errors[0].message)
+          })
       }
     },
   }
